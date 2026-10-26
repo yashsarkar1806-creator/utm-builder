@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>UTM Link Builder</title>
+  <style>
+    :root { --accent: #c2562f; --ink: #1d1d1f; --muted: #6b6b70; --bg: #faf8f5; }
+    * { box-sizing: border-box; }
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; background: var(--bg); color: var(--ink); margin: 0; padding: 2rem 1rem; }
+    main { max-width: 720px; margin: 0 auto; background: #fff; border-radius: 14px; padding: 2rem; box-shadow: 0 2px 18px rgba(0,0,0,.06); }
+    h1 { margin-top: 0; } p.lead { color: var(--muted); }
+    fieldset { border: 1px solid #eee; border-radius: 10px; margin: 1rem 0; padding: 1rem; }
+    legend { font-weight: 600; padding: 0 .4rem; }
+    label { display: block; font-size: .9rem; margin: .6rem 0 .2rem; }
+    input, select { width: 100%; padding: .55rem .7rem; border: 1px solid #ddd; border-radius: 8px; font-size: 1rem; }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: .8rem; }
+    button { background: var(--accent); color: #fff; border: 0; border-radius: 8px; padding: .6rem 1rem; font-size: 1rem; cursor: pointer; margin-top: .6rem; }
+    button.secondary { background: #eee; color: var(--ink); }
+    #output { word-break: break-all; background: #f4f1ec; padding: .8rem; border-radius: 8px; min-height: 2.5rem; font-family: ui-monospace, monospace; }
+    .err { color: #b00020; } .warn { color: #8a5a00; } small { color: var(--muted); }
+  </style>
+</head>
+<body>
+<main>
+  <h1>UTM Link Builder</h1>
+  <p class="lead">Build clean, consistent campaign links so GA4 reports stay tidy. Values are auto-normalised to the <a href="NAMING-CONVENTION.md">naming convention</a>.</p>
+
+  <fieldset>
+    <legend>1. Campaign name helper (optional)</legend>
+    <div class="row">
+      <div><label for="ym">Year-month</label><input id="ym" placeholder="2026-11" /></div>
+      <div><label for="market">Market</label><input id="market" placeholder="au" /></div>
+      <div><label for="theme">Theme</label><input id="theme" placeholder="Serum Launch" /></div>
+      <div><label for="objective">Objective</label>
+        <select id="objective"><option value="">(none)</option><option>awareness</option><option>prospecting</option><option>retargeting</option><option>retention</option><option>launch</option></select></div>
+    </div>
+    <button class="secondary" id="useName" type="button">Use as utm_campaign</button>
+  </fieldset>
+
+  <fieldset>
+    <legend>2. Link details</legend>
+    <label for="url">Website URL *</label><input id="url" placeholder="https://example.com/landing" />
+    <div class="row">
+      <div><label for="source">utm_source *</label><input id="source" placeholder="instagram, google, newsletter" /></div>
+      <div><label for="medium">utm_medium *</label>
+        <input id="medium" list="mediums" placeholder="paid-social" />
+        <datalist id="mediums"><option>cpc</option><option>paid-social</option><option>social</option><option>email</option><option>display</option><option>affiliate</option><option>referral</option><option>sms</option><option>qr</option></datalist></div>
+    </div>
+    <label for="campaign">utm_campaign *</label><input id="campaign" placeholder="2026-11_au_serum-launch_prospecting" />
+    <div class="row">
+      <div><label for="term">utm_term <small>(paid keyword)</small></label><input id="term" /></div>
+      <div><label for="content">utm_content <small>(creative / variant)</small></label><input id="content" placeholder="video-a" /></div>
+    </div>
+    <button id="build" type="button">Build link</button>
+    <button class="secondary" id="example" type="button">Try an example</button>
+  </fieldset>
+
+  <h3>Your link</h3>
+  <div id="output"></div>
+  <button class="secondary" id="copy" type="button">Copy</button>
+  <ul id="messages"></ul>
+</main>
+<script src="utm.js"></script>
+<script>
+  const $ = (id) => document.getElementById(id);
+  $("useName").onclick = () => {
+    $("campaign").value = UTM.campaignName({ yearMonth: $("ym").value, market: $("market").value, theme: $("theme").value, objective: $("objective").value });
+  };
+  $("build").onclick = () => {
+    const r = UTM.buildUtmUrl({ url: $("url").value, source: $("source").value, medium: $("medium").value,
+      campaign: $("campaign").value, term: $("term").value, content: $("content").value });
+    $("output").textContent = r.url;
+    $("messages").innerHTML = r.errors.map(e => `<li class="err">${e}</li>`).join("") + r.warnings.map(w => `<li class="warn">${w}</li>`).join("");
+  };
+  function loadExample() {
+    Object.entries({ ym: "2026-11", market: "AU", theme: "Serum Launch", objective: "prospecting",
+      url: "https://example-skincare.com/products/serum", source: "Instagram", medium: "paid-social", content: "Reel UGC A" })
+      .forEach(([id, v]) => { $(id).value = v; });
+    $("useName").click(); $("build").click();
+  }
+  $("example").onclick = loadExample;
+  if (new URLSearchParams(location.search).has("demo")) loadExample();
+  $("copy").onclick = () => { const t = $("output").textContent; if (t) navigator.clipboard.writeText(t); };
+</script>
+</body>
+</html>
